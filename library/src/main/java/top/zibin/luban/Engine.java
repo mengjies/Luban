@@ -19,10 +19,16 @@ class Engine {
   private int srcHeight;
   private boolean focusAlpha;
 
-  Engine(InputStreamProvider srcImg, File tagImg, boolean focusAlpha) throws IOException {
+    // add 2019/12/5
+  private int quality;
+  private int longSize;
+
+  Engine(InputStreamProvider srcImg, File tagImg, boolean focusAlpha, int quality, int longSize) throws IOException {
     this.tagImg = tagImg;
     this.srcImg = srcImg;
     this.focusAlpha = focusAlpha;
+    this.quality = quality;
+    this.longSize = longSize;
 
     BitmapFactory.Options options = new BitmapFactory.Options();
     options.inJustDecodeBounds = true;
@@ -33,6 +39,7 @@ class Engine {
     this.srcHeight = options.outHeight;
   }
 
+  @Deprecated
   private int computeSize() {
     srcWidth = srcWidth % 2 == 1 ? srcWidth + 1 : srcWidth;
     srcHeight = srcHeight % 2 == 1 ? srcHeight + 1 : srcHeight;
@@ -49,13 +56,33 @@ class Engine {
       } else if (longSide > 4990 && longSide < 10240) {
         return 4;
       } else {
-        return longSide / 1280 == 0 ? 1 : longSide / 1280;
+        return longSide / 1280;
       }
     } else if (scale <= 0.5625 && scale > 0.5) {
-      return longSide / 1280 == 0 ? 1 : longSide / 1280;
+      return longSide / 1280 == 0 ? 1 : (longSide / 1280);
     } else {
       return (int) Math.ceil(longSide / (1280.0 / scale));
     }
+  }
+
+  /**
+   * new
+   */
+  private int computeSize2() {
+    srcWidth = srcWidth % 2 == 1 ? srcWidth + 1 : srcWidth;
+    srcHeight = srcHeight % 2 == 1 ? srcHeight + 1 : srcHeight;
+
+    int longSide = Math.max(srcWidth, srcHeight);
+    int shortSide = Math.min(srcWidth, srcHeight);
+
+    int inSampleSize = 1;
+    if (longSide > longSize) {
+      int halfLong = longSide / 2;
+      while ((halfLong / inSampleSize) >= longSize) {
+        inSampleSize *= 2;
+      }
+    }
+    return inSampleSize;
   }
 
   private Bitmap rotatingImage(Bitmap bitmap, int angle) {
@@ -68,7 +95,7 @@ class Engine {
 
   File compress() throws IOException {
     BitmapFactory.Options options = new BitmapFactory.Options();
-    options.inSampleSize = computeSize();
+    options.inSampleSize = computeSize2();
 
     Bitmap tagBitmap = BitmapFactory.decodeStream(srcImg.open(), null, options);
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -76,7 +103,7 @@ class Engine {
     if (Checker.SINGLE.isJPG(srcImg.open())) {
       tagBitmap = rotatingImage(tagBitmap, Checker.SINGLE.getOrientation(srcImg.open()));
     }
-    tagBitmap.compress(focusAlpha ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, 60, stream);
+    tagBitmap.compress(focusAlpha ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, quality, stream);
     tagBitmap.recycle();
 
     FileOutputStream fos = new FileOutputStream(tagImg);

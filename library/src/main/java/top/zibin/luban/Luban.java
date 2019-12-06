@@ -34,6 +34,11 @@ public class Luban implements Handler.Callback {
   private CompressionPredicate mCompressionPredicate;
   private List<InputStreamProvider> mStreamProviders;
 
+  //quality 0-100
+  private int quality;
+  //长边最小尺寸
+  private int longSize;
+
   private Handler mHandler;
 
   private Luban(Builder builder) {
@@ -43,6 +48,8 @@ public class Luban implements Handler.Callback {
     this.mCompressListener = builder.mCompressListener;
     this.mLeastCompressSize = builder.mLeastCompressSize;
     this.mCompressionPredicate = builder.mCompressionPredicate;
+    this.quality = builder.quality;
+    this.longSize = builder.longSize;
     mHandler = new Handler(Looper.getMainLooper(), this);
   }
 
@@ -150,7 +157,7 @@ public class Luban implements Handler.Callback {
    */
   private File get(InputStreamProvider input, Context context) throws IOException {
     try {
-      return new Engine(input, getImageCacheFile(context, Checker.SINGLE.extSuffix(input)), focusAlpha).compress();
+      return new Engine(input, getImageCacheFile(context, Checker.SINGLE.extSuffix(input)), focusAlpha, quality, longSize).compress();
     } finally {
       input.close();
     }
@@ -189,13 +196,13 @@ public class Luban implements Handler.Callback {
     if (mCompressionPredicate != null) {
       if (mCompressionPredicate.apply(path.getPath())
           && Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath())) {
-        result = new Engine(path, outFile, focusAlpha).compress();
+        result = new Engine(path, outFile, focusAlpha, quality, longSize).compress();
       } else {
         result = new File(path.getPath());
       }
     } else {
       result = Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath()) ?
-          new Engine(path, outFile, focusAlpha).compress() :
+          new Engine(path, outFile, focusAlpha, quality, longSize).compress() :
           new File(path.getPath());
     }
 
@@ -229,6 +236,10 @@ public class Luban implements Handler.Callback {
     private OnCompressListener mCompressListener;
     private CompressionPredicate mCompressionPredicate;
     private List<InputStreamProvider> mStreamProviders;
+    //quality 0-100
+    private int quality = 80;
+    //长边最小尺寸
+    private int longSize = 1600;
 
     Builder(Context context) {
       this.context = context;
@@ -354,6 +365,17 @@ public class Luban implements Handler.Callback {
       return this;
     }
 
+
+    /**
+     * set longSize and quality
+     * @param longSize 需要的长边最小尺寸
+     * @param quality 图片压缩质量（0-100）
+     */
+    public Builder longSizeAndQuality(int longSize, int quality) {
+      this.longSize = longSize;
+      this.quality = quality;
+      return this;
+    }
 
     /**
      * begin compress image with asynchronous

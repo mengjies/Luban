@@ -43,7 +43,7 @@ import top.zibin.luban.OnRenameListener;
 
 public class MainActivity extends AppCompatActivity {
   private static final String TAG = "Luban";
-  private static final int range = 3;
+  private static final int range = 4;
 
   private List<ImageBean> mImageList = new ArrayList<>();
   private ImageAdapter mAdapter = new ImageAdapter(mImageList);
@@ -146,9 +146,10 @@ public class MainActivity extends AppCompatActivity {
           @Override
           public List<File> apply(@NonNull List<T> list) throws Exception {
             return Luban.with(MainActivity.this)
-                .setTargetDir(getPath())
-                .load(list)
-                .get();
+                    .setTargetDir(getPath())
+                    .load(list)
+                    .longSizeAndQuality(1600, 80)
+                    .get();
           }
         })
         .observeOn(AndroidSchedulers.mainThread())
