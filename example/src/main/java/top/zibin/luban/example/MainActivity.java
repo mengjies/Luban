@@ -43,7 +43,7 @@ import top.zibin.luban.OnRenameListener;
 
 public class MainActivity extends AppCompatActivity {
   private static final String TAG = "Luban";
-  private static final int range = 4;
+  private static final int range = 6;
 
   private List<ImageBean> mImageList = new ArrayList<>();
   private ImageAdapter mAdapter = new ImageAdapter(mImageList);
@@ -148,7 +148,9 @@ public class MainActivity extends AppCompatActivity {
             return Luban.with(MainActivity.this)
                     .setTargetDir(getPath())
                     .load(list)
-                    .longSizeAndQuality(1600, 80)
+                    .maxImageSize(800)
+                    .minLongSideSize(1600)
+                    .ignoreBy(500)
                     .get();
           }
         })
@@ -174,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
   private <T> void withLs(final List<T> photos) {
     Luban.with(this)
         .load(photos)
-        .ignoreBy(100)
+        .ignoreBy(700)
         .setTargetDir(getPath())
         .setFocusAlpha(false)
         .filter(new CompressionPredicate() {

@@ -3,6 +3,7 @@ package top.zibin.luban;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -21,14 +22,17 @@ class Engine {
 
     // add 2019/12/5
   private int quality;
-  private int longSize;
+  private final int LONG_SIZE;//最小长边尺寸（分辨率）
+  private final int MAX_SIZE;//最大 size (kb)
+  private final int MIN_QUALITY;//最小 quality （0 ~ 100）
 
-  Engine(InputStreamProvider srcImg, File tagImg, boolean focusAlpha, int quality, int longSize) throws IOException {
+  Engine(InputStreamProvider srcImg, File tagImg, boolean focusAlpha,int maxSize, int minQuality, int longSize) throws IOException {
     this.tagImg = tagImg;
     this.srcImg = srcImg;
     this.focusAlpha = focusAlpha;
-    this.quality = quality;
-    this.longSize = longSize;
+    this.MAX_SIZE = maxSize;
+    this.MIN_QUALITY = minQuality;
+    this.LONG_SIZE = longSize;
 
     BitmapFactory.Options options = new BitmapFactory.Options();
     options.inJustDecodeBounds = true;
@@ -76,9 +80,9 @@ class Engine {
     int shortSide = Math.min(srcWidth, srcHeight);
 
     int inSampleSize = 1;
-    if (longSide > longSize) {
+    if (longSide > LONG_SIZE) {
       int halfLong = longSide / 2;
-      while ((halfLong / inSampleSize) >= longSize) {
+      while ((halfLong / inSampleSize) >= LONG_SIZE) {
         inSampleSize *= 2;
       }
     }
@@ -94,6 +98,43 @@ class Engine {
   }
 
   File compress() throws IOException {
+    BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inSampleSize = computeSize2();
+
+    Bitmap tagBitmap = BitmapFactory.decodeStream(srcImg.open(), null, options);
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+    if (Checker.SINGLE.isJPG(srcImg.open())) {
+      tagBitmap = rotatingImage(tagBitmap, Checker.SINGLE.getOrientation(srcImg.open()));
+    }
+    Bitmap.CompressFormat format = focusAlpha ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG;
+//    tagBitmap.compress(format, quality, stream);
+
+    //计算压缩质量 从90开始 每次递减10
+    int quality = 90;
+    tagBitmap.compress(format, quality, stream);
+    Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
+
+    while (stream.toByteArray().length >> 10 > MAX_SIZE && quality >= MIN_QUALITY) {
+      quality -= 10;
+      stream.reset();
+      tagBitmap.compress(format, quality, stream);
+      Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
+    }
+
+
+    tagBitmap.recycle();
+
+    FileOutputStream fos = new FileOutputStream(tagImg);
+    fos.write(stream.toByteArray());
+    fos.flush();
+    fos.close();
+    stream.close();
+
+    return tagImg;
+  }
+
+  File compress2() throws IOException {
     BitmapFactory.Options options = new BitmapFactory.Options();
     options.inSampleSize = computeSize2();
 
