@@ -42,6 +42,7 @@ public class Luban implements Handler.Callback {
 
     private Luban(Builder builder) {
         this.mTargetDir = builder.mTargetDir;
+        this.focusAlpha =builder.focusAlpha;
         this.mRenameListener = builder.mRenameListener;
         this.mStreamProviders = builder.mStreamProviders;
         this.mCompressListener = builder.mCompressListener;
