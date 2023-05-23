@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
             return Luban.with(MainActivity.this)
                     .setTargetDir(getPath())
                     .load(list)
-                    .maxImageSize(500)
+                    .maxImageSize(400)
                     .minLongSideSize(1600)
                     .ignoreBy(500)
                     .get();

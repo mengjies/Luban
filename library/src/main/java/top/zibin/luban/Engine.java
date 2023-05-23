@@ -108,18 +108,17 @@ class Engine {
       tagBitmap = rotatingImage(tagBitmap, Checker.SINGLE.getOrientation(srcImg.open()));
     }
     Bitmap.CompressFormat format = focusAlpha ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG;
-//    tagBitmap.compress(format, quality, stream);
 
     //计算压缩质量 从90开始 每次递减10
     int quality = 90;
     tagBitmap.compress(format, quality, stream);
-    Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
+//    Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
 
-    while (stream.toByteArray().length >> 10 > MAX_SIZE && quality >= MIN_QUALITY) {
+    while (stream.toByteArray().length >> 10 > MAX_SIZE && (quality-10) >= MIN_QUALITY) {
       quality -= 10;
       stream.reset();
       tagBitmap.compress(format, quality, stream);
-      Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
+//      Log.d("Engine", "compress: quality=" + quality + " ,size=" + stream.toByteArray().length/1024 + "kb");
     }
 
 
