@@ -34,25 +34,25 @@ public class Luban implements Handler.Callback {
   private CompressionPredicate mCompressionPredicate;
   private List<InputStreamProvider> mStreamProviders;
 
-  //quality 0-100
-  private int quality;
-  //长边最小尺寸
-  private int longSize;
+    private int maxSize;//最大图片大小（kb）
+    private int minQuality;//最小图片质量 （0~100）
+    private int longSize;//最小长边尺寸(pix)
 
   private Handler mHandler;
 
-  private Luban(Builder builder) {
-    this.mTargetDir = builder.mTargetDir;
-    this.focusAlpha = builder.focusAlpha;
-    this.mRenameListener = builder.mRenameListener;
-    this.mStreamProviders = builder.mStreamProviders;
-    this.mCompressListener = builder.mCompressListener;
-    this.mLeastCompressSize = builder.mLeastCompressSize;
-    this.mCompressionPredicate = builder.mCompressionPredicate;
-    this.quality = builder.quality;
-    this.longSize = builder.longSize;
-    mHandler = new Handler(Looper.getMainLooper(), this);
-  }
+    private Luban(Builder builder) {
+        this.mTargetDir = builder.mTargetDir;
+        this.focusAlpha =builder.focusAlpha;
+        this.mRenameListener = builder.mRenameListener;
+        this.mStreamProviders = builder.mStreamProviders;
+        this.mCompressListener = builder.mCompressListener;
+        this.mLeastCompressSize = builder.mLeastCompressSize;
+        this.mCompressionPredicate = builder.mCompressionPredicate;
+        this.maxSize = builder.maxSize;
+        this.longSize = builder.longSize;
+        this.minQuality = builder.minQuality;
+        mHandler = new Handler(Looper.getMainLooper(), this);
+    }
 
   public static Builder with(Context context) {
     return new Builder(context);
@@ -158,7 +158,7 @@ public class Luban implements Handler.Callback {
    */
   private File get(InputStreamProvider input, Context context) throws IOException {
     try {
-      return new Engine(input, getImageCacheFile(context, Checker.SINGLE.extSuffix(input)), focusAlpha, quality, longSize).compress();
+      return new Engine(input, getImageCacheFile(context, Checker.SINGLE.extSuffix(input)), focusAlpha, maxSize, minQuality, longSize).compress();
     } finally {
       input.close();
     }
@@ -194,18 +194,18 @@ public class Luban implements Handler.Callback {
       outFile = getImageCustomFile(context, filename);
     }
 
-    if (mCompressionPredicate != null) {
-      if (mCompressionPredicate.apply(path.getPath())
-          && Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath())) {
-        result = new Engine(path, outFile, focusAlpha, quality, longSize).compress();
-      } else {
-        result = new File(path.getPath());
-      }
-    } else {
-      result = Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath()) ?
-          new Engine(path, outFile, focusAlpha, quality, longSize).compress() :
-          new File(path.getPath());
-    }
+        if (mCompressionPredicate != null) {
+            if (mCompressionPredicate.apply(path.getPath())
+                    && Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath())) {
+                result = new Engine(path, outFile, focusAlpha, maxSize, minQuality, longSize).compress();
+            } else {
+                result = new File(path.getPath());
+            }
+        } else {
+            result = Checker.SINGLE.needCompress(mLeastCompressSize, path.getPath()) ?
+                    new Engine(path, outFile, focusAlpha, maxSize, minQuality, longSize).compress() :
+                    new File(path.getPath());
+        }
 
     return result;
   }
@@ -228,19 +228,19 @@ public class Luban implements Handler.Callback {
     return false;
   }
 
-  public static class Builder {
-    private Context context;
-    private String mTargetDir;
-    private boolean focusAlpha;
-    private int mLeastCompressSize = 100;
-    private OnRenameListener mRenameListener;
-    private OnCompressListener mCompressListener;
-    private CompressionPredicate mCompressionPredicate;
-    private List<InputStreamProvider> mStreamProviders;
-    //quality 0-100
-    private int quality = 80;
-    //长边最小尺寸
-    private int longSize = 1600;
+    public static class Builder {
+        private Context context;
+        private String mTargetDir;
+        private boolean focusAlpha;
+        private int mLeastCompressSize = 100;
+        private OnRenameListener mRenameListener;
+        private OnCompressListener mCompressListener;
+        private CompressionPredicate mCompressionPredicate;
+        private List<InputStreamProvider> mStreamProviders;
+
+        private int maxSize = 500;//最大图片大小（kb）
+        private int minQuality = 60;//最小图片质量 （0~100）
+        private int longSize = 1600;//最小长边尺寸(pix)
 
     Builder(Context context) {
       this.context = context;
@@ -367,16 +367,50 @@ public class Luban implements Handler.Callback {
     }
 
 
-    /**
-     * set longSize and quality
-     * @param longSize 需要的长边最小尺寸
-     * @param quality 图片压缩质量（0-100）
-     */
-    public Builder longSizeAndQuality(int longSize, int quality) {
-      this.longSize = longSize;
-      this.quality = quality;
-      return this;
-    }
+        /**
+         * 设置压缩后允许的最大图片大小
+         * 默认值 500
+         *
+         * @param maxSize 图片最大大小（kb）
+         * @return
+         */
+        public Builder maxImageSize(int maxSize) {
+            if (maxSize < 10) {
+                return this;
+            }
+            this.maxSize = maxSize;
+            return this;
+        }
+
+        /**
+         * 设置压缩后允许的最小长边尺寸
+         * 默认值 1600
+         *
+         * @param longSize 需要的长边最小尺寸(pix)
+         */
+        public Builder minLongSideSize(int longSize) {
+            if (longSize < 100) {
+                return this;
+            }
+            this.longSize = longSize;
+            return this;
+        }
+
+        /**
+         * 设置允许的最小压缩质量
+         * 默认值60
+         * 取值范围0~100，建议取值 50、60、70、80
+         *
+         * @param minQuality 最小压缩质量
+         * @return
+         */
+        public Builder minQuality(int minQuality) {
+            if (minQuality < 10 || minQuality > 100) {
+                return this;
+            }
+            this.minQuality = minQuality;
+            return this;
+        }
 
     /**
      * begin compress image with asynchronous
